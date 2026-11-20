@@ -277,11 +277,6 @@
       transform: scale(1.06);
     }
 
-    .tile:hover .ico img, .tile:focus-visible .ico img {
-      filter: brightness(0);
-      transform: scale(1.06);
-    }
-
     .label {
       font-family: var(--display);
       font-weight: 700;
@@ -358,6 +353,17 @@
       font-size: 0.7rem;
       color: var(--muted);
       letter-spacing: 0.5px;
+    }
+
+    .audio-status {
+      font-size: 0.68rem;
+      color: #ff7b7b;
+      margin-top: 2px;
+      display: none;
+    }
+
+    .audio-status.visible {
+      display: block;
     }
 
     .progress-container {
@@ -520,6 +526,7 @@
       <div>
         <div class="song-title">ZA KAŻDYM RA2EM</div>
         <div class="artist">Young Multi, Jula, Kubi Producent, marceli</div>
+        <div class="audio-status" id="audio-status" role="alert"></div>
       </div>
       <div class="progress-container" id="progress-container" role="slider" tabindex="0"
            aria-label="Postęp utworu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -535,14 +542,39 @@
     const playBtn = document.getElementById('play');
     const progress = document.getElementById('progress');
     const progressContainer = document.getElementById('progress-container');
+    const audioStatus = document.getElementById('audio-status');
     let toastTimeout;
 
-    // Upewnia się, że funkcje obsługi ikony Kicka są dostępne także w zakresie skryptu
-    if (typeof window.handleKickIconLoad === 'function') {
-      handleKickIconLoad = window.handleKickIconLoad;
+    function setAudioError(message, details) {
+      if (details) {
+        console.error('[Audio]', message, details);
+      } else {
+        console.error('[Audio]', message);
+      }
+      if (audioStatus) {
+        audioStatus.textContent = message;
+        audioStatus.classList.add('visible');
+      }
     }
-    if (typeof window.handleKickIconError === 'function') {
-      handleKickIconError = window.handleKickIconError;
+
+    function clearAudioError() {
+      if (audioStatus) {
+        audioStatus.textContent = '';
+        audioStatus.classList.remove('visible');
+      }
+    }
+
+    function startAudio() {
+      if (!audio) return;
+      const playPromise = audio.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch((err) => {
+          setAudioError(
+            `Błąd odtwarzania (${err.name}): ${err.message || 'sprawdź plik song.mp3'}`,
+            { name: err.name, message: err.message, src: audio.currentSrc || audio.src }
+          );
+        });
+      }
     }
 
     // Kopiuje nick na Discorda do schowka z obsługą awaryjną
@@ -584,18 +616,34 @@
       overlay.style.opacity = '0';
       overlay.style.visibility = 'hidden';
       document.body.classList.add('in');
-      if (audio) {
-        audio.play().catch(() => {});
-      }
+      startAudio();
     }
 
     if (audio && playBtn) {
+      audio.addEventListener('playing', clearAudioError);
       audio.addEventListener('play', () => playBtn.classList.add('playing'));
       audio.addEventListener('pause', () => playBtn.classList.remove('playing'));
 
+      audio.addEventListener('error', () => {
+        const err = audio.error;
+        const codeMap = {
+          1: 'Przerwano pobieranie (MEDIA_ERR_ABORTED)',
+          2: 'Błąd sieci lub brak pliku song.mp3 (MEDIA_ERR_NETWORK)',
+          3: 'Błąd dekodowania pliku MP3 (MEDIA_ERR_DECODE)',
+          4: 'Nieobsługiwany format lub brak pliku song.mp3 (MEDIA_ERR_SRC_NOT_SUPPORTED)'
+        };
+        const humanMsg = err ? (codeMap[err.code] || `Kod błędu: ${err.code}`) : 'Nieznany błąd audio';
+        setAudioError(humanMsg, {
+          code: err ? err.code : null,
+          message: err ? err.message : null,
+          currentSrc: audio.currentSrc,
+          networkState: audio.networkState
+        });
+      });
+
       playBtn.addEventListener('click', () => {
         if (audio.paused) {
-          audio.play().catch(() => {});
+          startAudio();
         } else {
           audio.pause();
         }
