@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>@referencja – Link in Bio</title>
+  <meta name="description" content="Wszystkie moje linki w jednym miejscu.">
+  <meta name="theme-color" content="#0b0b0b">
+
+  <!-- Metatagi Open Graph oraz ikona strony oparte o animowany avatar.gif -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="@referencja">
+  <meta property="og:description" content="Wszystkie moje linki w jednym miejscu.">
+  <meta property="og:image" content="https://referencja.monsterkoholik.pl/avatar.gif">
+  <meta property="og:url" content="https://referencja.monsterkoholik.pl/">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="avatar.gif">
+
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2743728399885004"
+       crossorigin="anonymous"></script>
+
+  <!-- Ikony FontAwesome oraz czcionki Syne i Space Mono -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+
+  <script>
+    // Rejestruje funkcje obsługi ikony Kicka jeszcze przed wyrenderowaniem kafelka w DOM
+    window.handleKickIconLoad = function handleKickIconLoad(imgEl) {
+      if (!imgEl) return;
+      imgEl.classList.remove('is-hidden');
+      const fallbackSvg = imgEl.parentElement && imgEl.parentElement.querySelector('.kick-fallback-svg');
+      if (fallbackSvg) {
+        fallbackSvg.classList.remove('is-visible');
+      }
+    };
+
+    window.handleKickIconError = function handleKickIconError(imgEl) {
+      if (!imgEl) return;
+      imgEl.classList.add('is-hidden');
+      const fallbackSvg = imgEl.parentElement && imgEl.parentElement.querySelector('.kick-fallback-svg');
+      if (fallbackSvg) {
+        fallbackSvg.classList.add('is-visible');
+      }
+    };
+  </script>
+
+  <style>
+    /* Zmienne kolorystyczne i typograficzne motywujące wygląd strony */
+    :root {
+      --bg: #0b0b0b;
+      --text: #ece9e2;
+      --muted: rgba(236, 233, 226, 0.55);
+      --line: rgba(236, 233, 226, 0.22);
+      --accent: #4da3ff;
+      --display: 'Syne', system-ui, sans-serif;
+      --mono: 'Space Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* --- TŁO: obraz bg.png w oryginalnych kolorach z delikatnym przyciemnieniem --- */
+    #img-bg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: none;
+      z-index: -2;
+      pointer-events: none;
+    }
+
+    .shade {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: linear-gradient(180deg, rgba(11, 11, 11, 0.55) 0%, rgba(11, 11, 11, 0.88) 100%);
+    }
+
+    /* --- EKRAN STARTOWY --- */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      border: none;
+      color: var(--text);
+      font: inherit;
+      background: rgba(11, 11, 11, 0.82);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+
+    #overlay span {
+      font-family: var(--mono);
+      font-size: clamp(1rem, 4vw, 1.3rem);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    #overlay span::after {
+      content: "";
+      display: inline-block;
+      width: 0.6em;
+      height: 1.1em;
+      margin-left: 10px;
+      vertical-align: -0.2em;
+      background: var(--accent);
+      animation: blink 1s steps(1) infinite;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+    #overlay:focus-visible { outline: 2px solid var(--accent); outline-offset: -12px; }
+
+    /* --- GŁÓWNY UKŁAD STRONY --- */
+    .stage {
+      max-width: 760px;
+      margin: 0 auto;
+      min-height: 100vh;
+      min-height: 100dvh;
+      padding: 48px 24px 128px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.6s ease 0.2s;
+    }
+
+    body.in .stage { opacity: 1; }
+
+    /* Nagłówek z avatarem 229x229, nickiem i cytatem kursywą pod spodem */
+    .head {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+
+    .head-info {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 229px;
+      height: 229px;
+      max-width: 100%;
+      flex: none;
+      object-fit: cover;
+      border: 1px solid var(--line);
+    }
+
+    h1 {
+      font-family: var(--display);
+      font-weight: 800;
+      font-size: clamp(1.75rem, 5.5vw, 2.85rem);
+      line-height: 0.95;
+      letter-spacing: -1.5px;
+      text-transform: lowercase;
+    }
+
+    .bio {
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-style: italic;
+      line-height: 1.6;
+      max-width: 460px;
+    }
+
+    /* --- SIATKA KAFELKÓW LINKÓW --- */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+      gap: 8px;
+      margin-top: 28px;
+    }
+
+    .tile {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 26px;
+      min-height: 104px;
+      padding: 14px;
+      font: inherit;
+      text-align: left;
+      color: var(--text);
+      text-decoration: none;
+      background: rgba(11, 11, 11, 0.55);
+      border: 1px solid var(--line);
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.5s ease, transform 0.5s ease, background 0.18s, color 0.18s, border-color 0.18s;
+      transition-delay: calc(var(--i) * 45ms + 250ms), calc(var(--i) * 45ms + 250ms), 0s, 0s, 0s;
+    }
+
+    body.in .tile { opacity: 1; transform: none; }
+
+    .tile:hover, .tile:focus-visible {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0b0b0b;
+      transition-delay: 0s;
+    }
+
+    .tile:hover .hdl, .tile:focus-visible .hdl { color: rgba(11, 11, 11, 0.7); }
+
+    /* Ikony: domyślnie jasne/białe, po najechaniu na kafelek stają się czarne (#0b0b0b) */
+    .ico {
+      font-size: 1.35rem;
+      height: 1.35rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .ico svg {
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+
+    .ico img {
+      height: 1.2rem;
+      width: auto;
+      filter: brightness(0) invert(0.92);
+      transition: filter 0.18s, transform 0.18s;
+    }
+
+    .ico img.is-hidden {
+      display: none;
+    }
+
+    .kick-fallback-svg {
+      display: none;
+      width: 1.2rem;
+      height: 1.2rem;
+      color: var(--text);
+      transition: color 0.18s, transform 0.18s;
+    }
+
+    .kick-fallback-svg.is-visible {
+      display: inline-block;
+    }
+
+    .tile .fa-discord {
+      color: var(--text);
+      transition: color 0.18s, transform 0.18s;
+    }
+
+    .tile:hover .fa-discord, .tile:focus-visible .fa-discord {
+      color: #0b0b0b;
+      transform: scale(1.06);
+    }
+
+    .tile:hover .ico img, .tile:focus-visible .ico img {
+      filter: brightness(0);
+      transform: scale(1.06);
+    }
+
+    .tile:hover .kick-fallback-svg, .tile:focus-visible .kick-fallback-svg {
+      color: #0b0b0b;
+      transform: scale(1.06);
+    }
+
+    .tile:hover .ico img, .tile:focus-visible .ico img {
+      filter: brightness(0);
+      transform: scale(1.06);
+    }
+
+    .label {
+      font-family: var(--display);
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: 0.5px;
+    }
+
+    .hdl {
+      display: block;
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-top: 2px;
+      letter-spacing: 0.5px;
+    }
+
+    /* --- ODTWARZACZ MUZYKI: warstwa pływająca nad treścią strony --- */
+    .player {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translate(-50%, 16px);
+      width: calc(100% - 32px);
+      max-width: 712px;
+      z-index: 50;
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      grid-template-rows: auto auto;
+      gap: 4px 14px;
+      padding: 12px 14px;
+      background: rgba(11, 11, 11, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--line);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease 0.35s, transform 0.5s ease 0.35s;
+    }
+
+    body.in .player {
+      opacity: 1;
+      transform: translate(-50%, 0);
+      pointer-events: auto;
+    }
+
+    .play {
+      grid-row: 1 / span 2;
+      align-self: center;
+      width: 48px;
+      height: 48px;
+      border: none;
+      border-radius: 0;
+      background: var(--accent);
+      color: #0b0b0b;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: filter 0.2s;
+    }
+
+    .play:hover { filter: brightness(1.12); }
+    .play svg { width: 22px; height: 22px; display: block; margin: auto; }
+    .play .i-pause { display: none; }
+    .play.playing .i-play { display: none; }
+    .play.playing .i-pause { display: block; }
+
+    .song-title {
+      font-family: var(--display);
+      font-weight: 700;
+      font-size: 1.05rem;
+      line-height: 1.1;
+    }
+
+    .artist {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.5px;
+    }
+
+    .progress-container {
+      grid-column: 2;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 3px;
+      background: var(--line);
+    }
+
+    .progress {
+      width: 0%;
+      height: 100%;
+      background: var(--accent);
+      transition: width 0.1s linear;
+    }
+
+    /* --- POWIADOMIENIE O SKOPIOWANIU NICKU --- */
+    #copy-toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-16px);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      background: var(--bg);
+      border: 1px solid var(--accent);
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.25s ease;
+      z-index: 1000;
+    }
+
+    #copy-toast.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    a:focus-visible, button:focus-visible, .progress-container:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    /* Dostosowanie do mniejszych ekranów */
+    @media (max-width: 480px) {
+      .stage { padding-bottom: 116px; }
+      .grid { grid-template-columns: 1fr 1fr; }
+      .head { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .avatar { width: min(229px, 100%); height: auto; aspect-ratio: 1 / 1; }
+      .player { bottom: 12px; width: calc(100% - 24px); }
+    }
+
+    /* Poszanowanie ustawienia ograniczenia ruchu w systemie użytkownika */
+    @media (prefers-reduced-motion: reduce) {
+      #overlay span::after { animation: none; }
+      .stage, .tile {
+        transition-duration: 0.01s !important;
+        transition-delay: 0s !important;
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Powiadomienie po skopiowaniu nicku Discord -->
+  <div id="copy-toast" role="status" aria-live="polite">
+    <i class="fa-brands fa-discord" aria-hidden="true"></i>
+    <span>Skopiowano nick Discord!</span>
+  </div>
+
+  <!-- Ekran wejściowy wymagany do płynnego uruchomienia dźwięku -->
+  <button id="overlay" type="button" onclick="enterSite()">
+    <span>Kliknij, aby wejść</span>
+  </button>
+
+  <!-- Tło PNG oraz półprzezroczysta warstwa przyciemniająca -->
+  <img src="bg.png" alt="" id="img-bg" aria-hidden="true">
+  <div class="shade" aria-hidden="true"></div>
+
+  <!-- Główna zawartość strony -->
+  <main class="stage">
+    <div class="head">
+      <img src="avatar.gif" alt="Avatar @referencja" class="avatar">
+      <div class="head-info">
+        <h1>@referencja</h1>
+        <p class="bio">Sztylet w moim sercu podtrzymuje wciąż mnie</p>
+      </div>
+    </div>
+
+    <nav class="grid" aria-label="Moje linki">
+      <button type="button" class="tile" style="--i:0" onclick="copyDiscordNick('referencja')">
+        <span class="ico"><i class="fa-brands fa-discord" aria-hidden="true"></i></span>
+        <span><span class="label">Kontakt DC</span><span class="hdl">referencja</span></span>
+      </button>
+      <a class="tile" style="--i:1" href="https://twitch.tv/pawissek" target="_blank" rel="noopener">
+        <span class="ico"><i class="fa-brands fa-twitch" aria-hidden="true"></i></span>
+        <span><span class="label">Twitch</span><span class="hdl">pawissek</span></span>
+      </a>
+      <a class="tile" style="--i:2" href="https://kick.com/pawissek" target="_blank" rel="noopener">
+        <span class="ico">
+          <img src="kick.png" alt="Kick" onload="handleKickIconLoad(this)" onerror="handleKickIconError(this)">
+          <svg class="kick-fallback-svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M3 2h7.5v6.2L15.8 2H22l-6.9 8.2L22.5 22h-6.8l-5.2-7.1V22H3V2z"/>
+          </svg>
+        </span>
+        <span><span class="label">Kick</span><span class="hdl">pawissek</span></span>
+      </a>
+      <a class="tile" style="--i:3" href="https://x.com/pawissek" target="_blank" rel="noopener">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </span>
+        <span><span class="label">X</span><span class="hdl">pawissek</span></span>
+      </a>
+      <a class="tile" style="--i:4" href="https://namemc.com/profile/clcv" target="_blank" rel="noopener">
+        <span class="ico">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M0 0v24h24V0H0zm4 4h16v16H4V4zm3 3v10h4v-5h2v5h4V10h-4V7H7z"/></svg>
+        </span>
+        <span><span class="label">NameMC</span><span class="hdl">clcv</span></span>
+      </a>
+      <a class="tile" style="--i:5" href="https://steamcommunity.com/id/pawissek" target="_blank" rel="noopener">
+        <span class="ico"><i class="fa-brands fa-steam" aria-hidden="true"></i></span>
+        <span><span class="label">Steam</span><span class="hdl">pawissek</span></span>
+      </a>
+      <a class="tile" style="--i:6" href="https://steamcommunity.com/id/clcv" target="_blank" rel="noopener">
+        <span class="ico"><i class="fa-brands fa-steam" aria-hidden="true"></i></span>
+        <span><span class="label">Steam II</span><span class="hdl">clcv</span></span>
+      </a>
+      <a class="tile" style="--i:7" href="https://github.com/pawissek" target="_blank" rel="noopener">
+        <span class="ico"><i class="fa-brands fa-github" aria-hidden="true"></i></span>
+        <span><span class="label">GitHub</span><span class="hdl">pawissek</span></span>
+      </a>
+      <a class="tile" style="--i:8" href="https://open.spotify.com/user/31wsibzxwapnyd3h6h5qod6mem5i?si=75b7863ce6ba4e52" target="_blank" rel="noopener">
+        <span class="ico"><i class="fa-brands fa-spotify" aria-hidden="true"></i></span>
+        <span><span class="label">Spotify</span><span class="hdl">profil</span></span>
+      </a>
+      <a class="tile" style="--i:9" href="https://instagram.com/pawissek" target="_blank" rel="noopener">
+        <span class="ico"><i class="fa-brands fa-instagram" aria-hidden="true"></i></span>
+        <span><span class="label">Instagram</span><span class="hdl">pawissek</span></span>
+      </a>
+    </nav>
+
+    <!-- Pływający odtwarzacz muzyki nad warstwą kafelków -->
+    <div class="player">
+      <button class="play" id="play" type="button" aria-label="Odtwórz lub zatrzymaj">
+        <svg class="i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        <svg class="i-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+      </button>
+      <div>
+        <div class="song-title">joint i sport</div>
+        <div class="artist">kuqe 2115</div>
+      </div>
+      <div class="progress-container" id="progress-container" role="slider" tabindex="0"
+           aria-label="Postęp utworu" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="progress-track"><div class="progress" id="progress"></div></div>
+      </div>
+    </div>
+  </main>
+
+  <audio id="audio" src="song.mp3" loop preload="metadata"></audio>
+
+  <script>
+    const audio = document.getElementById('audio');
+    const playBtn = document.getElementById('play');
+    const progress = document.getElementById('progress');
+    const progressContainer = document.getElementById('progress-container');
+    let toastTimeout;
+
+    // Upewnia się, że funkcje obsługi ikony Kicka są dostępne także w zakresie skryptu
+    if (typeof window.handleKickIconLoad === 'function') {
+      handleKickIconLoad = window.handleKickIconLoad;
+    }
+    if (typeof window.handleKickIconError === 'function') {
+      handleKickIconError = window.handleKickIconError;
+    }
+
+    // Kopiuje nick na Discorda do schowka z obsługą awaryjną
+    function copyDiscordNick(nick) {
+      const showCopyToast = () => {
+        const toast = document.getElementById('copy-toast');
+        if (!toast) return;
+        clearTimeout(toastTimeout);
+        toast.classList.add('show');
+        toastTimeout = setTimeout(() => toast.classList.remove('show'), 2500);
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(nick)
+          .then(showCopyToast)
+          .catch(() => fallbackCopy(nick, showCopyToast));
+      } else {
+        fallbackCopy(nick, showCopyToast);
+      }
+    }
+
+    function fallbackCopy(text, callback) {
+      try {
+        const input = document.createElement('input');
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        callback();
+      } catch (err) {
+        console.error('Błąd podczas kopiowania: ', err);
+      }
+    }
+
+    // Ukrywa ekran powitalny, odsłania stronę i uruchamia muzykę
+    function enterSite() {
+      const overlay = document.getElementById('overlay');
+      overlay.style.opacity = '0';
+      overlay.style.visibility = 'hidden';
+      document.body.classList.add('in');
+      if (audio) {
+        audio.play().catch(() => {});
+      }
+    }
+
+    if (audio && playBtn) {
+      audio.addEventListener('play', () => playBtn.classList.add('playing'));
+      audio.addEventListener('pause', () => playBtn.classList.remove('playing'));
+
+      playBtn.addEventListener('click', () => {
+        if (audio.paused) {
+          audio.play().catch(() => {});
+        } else {
+          audio.pause();
+        }
+      });
+
+      audio.addEventListener('timeupdate', () => {
+        if (!audio.duration || !progress || !progressContainer) return;
+        const pct = (audio.currentTime / audio.duration) * 100;
+        progress.style.width = pct + '%';
+        progressContainer.setAttribute('aria-valuenow', Math.round(pct));
+      });
+    }
+
+    // Przewijanie postępu utworu kliknięciem lub klawiaturą
+    function seekTo(clientX) {
+      if (!audio || !audio.duration || !progressContainer) return;
+      const rect = progressContainer.getBoundingClientRect();
+      const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+      audio.currentTime = ratio * audio.duration;
+    }
+
+    if (progressContainer) {
+      progressContainer.addEventListener('click', (e) => seekTo(e.clientX));
+      progressContainer.addEventListener('keydown', (e) => {
+        if (!audio || !audio.duration) return;
+        if (e.key === 'ArrowRight') {
+          audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+        } else if (e.key === 'ArrowLeft') {
+          audio.currentTime = Math.max(0, audio.currentTime - 5);
+        }
+      });
+    }
+  </script>
+</body>
+</html>
